@@ -87,7 +87,8 @@ class NewportMotor(PCDSmotor):
     location_name = Unicode()
     instrument_name = Unicode()
     #component = Reference(component_id, Component.location_id)
-    component = Reference(component_name, Component.location_name)
+    #component = Reference(component_name, Component.location_name)
+    component = Reference(component_name, Component.name)
     location = Reference(location_name, Location.name)
     instrument = Reference(instrument_name, Instrument.name)
     
@@ -104,7 +105,8 @@ class IMSMotor(PCDSmotor):
     component_name = Unicode()
     location_name = Unicode()
     instrument_name = Unicode()
-    component = Reference(component_name, Component.location_name)
+    #component = Reference(component_name, Component.location_name)
+    component = Reference(component_name, Component.name)
     location = Reference(location_name, Location.name)
     instrument = Reference(instrument_name, Instrument.name)
         
