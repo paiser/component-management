@@ -5,15 +5,18 @@ import sys
 class Instrument(object):
     __storm_table__ = "instrument"
     id = Int(primary=True)
+    name = Unicode()
    
     def __init__(self, name):
         self.name = name
 
 class Loc(object):
     __storm_table__ = "location"
-    instrument_id = Int(primary=True)
+    #instrument_id = Int(primary=True)
+    instrument_name = Unicode(primary=True)
     id = Int()
-    instrument = Reference(instrument_id, Instrument.id)
+    #instrument = Reference(instrument_id, Instrument.id)
+    instrument = Reference(instrument_name, Instrument.name)
     name = Unicode()
     
 class Location(Loc):
@@ -33,8 +36,11 @@ class Location(Loc):
 class Component(Location):
     __storm_table__ = "component"
     id = Int()#primary=True)
-    location_id = Int()    
-    location = Reference(location_id, Location.instrument_id)
+    #location_id = Int()    
+    location_name = Unicode() 
+    #location = Reference(location_id, Location.instrument_id)
+    ###location = Reference(location_name, Location.instrument_name)
+    location = Reference(location_name, Location.name)
     #component_instrument_id = Int()
     #instrument = Reference(component_instrument_id, Instrument.id)
 
@@ -45,19 +51,28 @@ class Component(Location):
 class Device(object):
     __storm_table__ = "device"
     id = Int(primary=True)
-    instrument_id = Int()
-    location_id   = Int()
-    component_id  = Int()
-    name = str()
-    alias = str()
-    dtype = str()
+#     instrument_id = Int()
+#     location_id   = Int()
+#     component_id  = Int()
+    instrument_name = Unicode()
+    location_name   = Unicode()
+    component_name  = Unicode()    
+    name = Unicode()
+    alias = Unicode()
+    #dtype = Unicode()
 
 class PCDSmotor(Device):
     __storm_table__ = "pcdsmotor"
     id = Int(primary=True)
-    brand = str()
-    component_id = Int()
-    component = Reference(component_id, Component.location_id)
+    brand = Unicode()
+    #component_id = Unicode()
+    component_name = Unicode()
+    location_name = Unicode()
+    instrument_name = Unicode()
+    #component = Reference(component_id, Component.location_id)
+    component = Reference(component_name, Component.location_name)
+    location = Reference(location_name, Location.name)
+    instrument = Reference(instrument_name, Instrument.name)
 
     def __init__(self, name, alias, brand=None):
         self.name = name
@@ -65,24 +80,38 @@ class PCDSmotor(Device):
         self.brand = brand
 		
 class NewportMotor(PCDSmotor):
-    __storm_table__ = "pcdsmotor"
-    #__storm_table__ = "newportmotor"    
-    component_id = Int()
-    component = Reference(component_id, Component.location_id)
+    #__storm_table__ = "pcdsmotor"
+    __storm_table__ = "newportmotor"    
+    #component_id = Int()
+    component_name = Unicode()
+    location_name = Unicode()
+    instrument_name = Unicode()
+    #component = Reference(component_id, Component.location_id)
+    component = Reference(component_name, Component.location_name)
+    location = Reference(location_name, Location.name)
+    instrument = Reference(instrument_name, Instrument.name)
     
-    def __init__(self, name, alias, brand='Newport'):
+    def __init__(self, name, alias, brand=u'Newport'):
         self.name = name
         self.alias = alias
+        self.brand = brand
         
 class IMSMotor(PCDSmotor):
-    __storm_table__ = "pcdsmotor"
-    #__storm_table__ = "imsmotor"    
-    component_id = Int()
-    component = Reference(component_id, Component.location_id)
-    
-    def __init__(self, name, alias, brand='IMS'):
+    #__storm_table__ = "pcdsmotor"
+    __storm_table__ = "imsmotor"    
+    #component_id = Int()
+    #component = Reference(component_id, Component.location_id)
+    component_name = Unicode()
+    location_name = Unicode()
+    instrument_name = Unicode()
+    component = Reference(component_name, Component.location_name)
+    location = Reference(location_name, Location.name)
+    instrument = Reference(instrument_name, Instrument.name)
+        
+    def __init__(self, name, alias, brand=u'IMS'):
         self.name = name
         self.alias = alias
+        self.brand = brand
 
 class MotorManager(object):
     def __init__(self, scheme, user, passwd, hostname, port, dbname, parent=None):
@@ -90,12 +119,14 @@ class MotorManager(object):
         dbpars   = (scheme, user, passwd, hostname, port, dbname)
         database = create_database("%s://%s:%s@%s:%s/%s" % dbpars)        
         self.store = Store(database)
-        Location.imsmotors = ReferenceSet(Component.location_id, IMSMotor.component_id)        
-        Location.newportmotors = ReferenceSet(Component.location_id, NewportMotor.component_id)        
+        #Location.imsmotors = ReferenceSet(Component.location_id, IMSMotor.component_id)        
+        #Location.newportmotors = ReferenceSet(Component.location_id, NewportMotor.component_id)      
+        Location.imsmotors = ReferenceSet(Component.location_name, IMSMotor.component_name)        
+        Location.newportmotors = ReferenceSet(Component.location_name, NewportMotor.component_name)             
         # TO BE FIXED:
-        Instrument.locations = ReferenceSet(Loc.instrument_id, Loc.id)                
-        Location.components  = ReferenceSet(Location.id, Component.id)
-        Component.devices    = Reference(Component.id, PCDSmotor.id)
+        #Instrument.locations = ReferenceSet(Loc.instrument_name, Instrument.name)                
+        #Location.components  = ReferenceSet(Location.id, Component.id)
+        #Component.devices    = Reference(Component.id, PCDSmotor.id)
         
     def create_alltables(self):
         try:
@@ -103,18 +134,43 @@ class MotorManager(object):
                                "(id INTEGER PRIMARY KEY, name VARCHAR)", noresult=True)
 
             self.store.execute("CREATE TABLE location "
-                               "(id INTEGER PRIMARY KEY, instrument_id INTEGER, name VARCHAR)", noresult=True)
+                               "(id INTEGER PRIMARY KEY, instrument_name VARCHAR, name VARCHAR)", noresult=True)
 
             self.store.execute("CREATE TABLE component "
-                               "(id INTEGER PRIMARY KEY, instrument_id INTEGER, location_id INTEGER, name VARCHAR)", noresult=True)
+                               "(id INTEGER PRIMARY KEY, instrument_name VARCHAR, location_name VARCHAR, name VARCHAR)", noresult=True)
 
             self.store.execute("CREATE TABLE device "
-                               "(id INTEGER PRIMARY KEY, instrument_id INTEGER, location_id INTEGER, component_id INTEGER, name VARCHAR, alias VARCHAR, dtype VARCHAR)", noresult=True)
+                               "(id INTEGER PRIMARY KEY, instrument_name VARCHAR, location_name VARCHAR, component_name VARCHAR, name VARCHAR, alias VARCHAR)", noresult=True)
 
             self.store.execute("CREATE TABLE pcdsmotor "
-                               "(id INTEGER PRIMARY KEY, instrument_id INTEGER, location_id INTEGER, component_id INTEGER, name VARCHAR, brand VARCHAR)", noresult=True)
+                               "(id INTEGER PRIMARY KEY, instrument_name VARCHAR, location_name VARCHAR, component_name VARCHAR, name VARCHAR, brand VARCHAR)", noresult=True)
                                        
-        
+            self.store.execute("CREATE TABLE newportmotor "
+                               "(id INTEGER PRIMARY KEY, instrument_name VARCHAR, location_name VARCHAR, component_name VARCHAR, name VARCHAR, alias VARCHAR, brand VARCHAR)", noresult=True)
+            
+            self.store.execute("CREATE TABLE imsmotor "
+                               "(id INTEGER PRIMARY KEY, instrument_name VARCHAR, location_name VARCHAR, component_name VARCHAR, name VARCHAR, alias VARCHAR, brand VARCHAR)", noresult=True)
+ 
+
+
+#             self.store.execute("CREATE TABLE location "
+#                                "(id INTEGER PRIMARY KEY, instrument_id INTEGER, name VARCHAR)", noresult=True)
+# 
+#             self.store.execute("CREATE TABLE component "
+#                                "(id INTEGER PRIMARY KEY, instrument_id INTEGER, location_id INTEGER, name VARCHAR)", noresult=True)
+# 
+#             self.store.execute("CREATE TABLE device "
+#                                "(id INTEGER PRIMARY KEY, instrument_id INTEGER, location_id INTEGER, component_id INTEGER, name VARCHAR, alias VARCHAR)", noresult=True)
+# 
+#             self.store.execute("CREATE TABLE pcdsmotor "
+#                                "(id INTEGER PRIMARY KEY, instrument_id INTEGER, location_id INTEGER, component_id INTEGER, name VARCHAR, brand VARCHAR)", noresult=True)
+#                                        
+#             self.store.execute("CREATE TABLE newportmotor "
+#                                "(id INTEGER PRIMARY KEY, instrument_id INTEGER, location_id INTEGER, component_id INTEGER, name VARCHAR, alias VARCHAR, brand VARCHAR)", noresult=True)
+#             
+#             self.store.execute("CREATE TABLE imsmotor "
+#                                "(id INTEGER PRIMARY KEY, instrument_id INTEGER, location_id INTEGER, component_id INTEGER, name VARCHAR, alias VARCHAR, brand VARCHAR)", noresult=True)
+#          
         
         
         
@@ -155,7 +211,7 @@ class MotorManager(object):
         self.store.rollback()
 
     def addinstrument(self, instrument):    	
-        newinstrument = Instrument(instrument)
+        newinstrument = Instrument(unicode(instrument))
         print 'Creating New Instrument', newinstrument.name
         return newinstrument
 
@@ -173,20 +229,20 @@ class MotorManager(object):
     	return newcomponent
 
     def addimsmotor(self, motor, alias=None, component=None):
-        newmotor = self.store.add(IMSMotor(motor, alias))
+        newmotor = self.store.add(IMSMotor(unicode(motor), unicode(alias)))
         newmotor.component  = component
         newmotor.location   = component.location
         newmotor.instrument = component.instrument
-        newmotor.brand = 'ims'        
+        #newmotor.brand = u'ims'        
         print 'Creating New IMS motor', newmotor.name, 'with alias', newmotor.alias, 'in  component', newmotor.component.name, 'in location', newmotor.location.name, 'in instrument', newmotor.instrument.name       
         return newmotor
 
     def addnewmportmotor(self, motor, alias=None, component=None):
-        newmotor = self.store.add(NewportMotor(motor, alias))
+        newmotor = self.store.add(NewportMotor(unicode(motor), unicode(alias)))
         newmotor.component  = component
         newmotor.location   = component.location
         newmotor.instrument = component.instrument
-        newmotor.brand = 'newport'
+        #newmotor.brand = u'newport'
         print 'Creating New Newport motor', newmotor.name, 'with alias', newmotor.alias, 'in  component', newmotor.component.name, 'in location', newmotor.location.name, 'in instrument', newmotor.instrument.name       
         return newmotor
     
@@ -195,4 +251,4 @@ class MotorManager(object):
         print 'looking for', location.name
         #return self.store.find(Component, name=unicode(location.name))#.one()
         return location.name.find(unicode(location.name+'dd'))#name=unicode(location.name)).one()        
-         
+            
