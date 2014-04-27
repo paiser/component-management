@@ -80,6 +80,20 @@ class MotorManager(object):
         
     def addinstrument(self, instrument): 
         # NEED TO CHECK IF INSTRUMENT ALREADY EXISTS:
+        ##result = manager.store.find(Instrument)
+        result = self.store.find(Instrument, Instrument.name.is_in([unicode(instrument)]))
+        if result.count():
+            print 'Instrument %s Exists' % instrument
+            print 'SHOULD RETURN THE REQUESTED EXISTING INSTRUMENT'
+            return None# Instrument.instrument
+        #result.order_by(Instrument.name)
+        ##print 'result', result.count()
+        ##print 'result.names', list(result.values(Instrument.name))
+        ##for i in result:
+        ##    print 'i',i.name
+
+
+
         newinstrument = Instrument(unicode(instrument))
 #         try:
 #             print self.instrument.name.count(newinstrument.name)#find(unicode(instrument))
@@ -94,8 +108,11 @@ class MotorManager(object):
         return newinstrument
 
     def addlocation(self, location, instrument):
+        #try:
         newlocation = Location(unicode(location))
         newlocation.instrument = instrument
+        #except:
+        #    pass
         print 'Creating New Location', newlocation.name, 'in instrument', instrument.name
         #self.inmemory_locations[instrument.name] = newlocation.name
         #self.locations.append(newlocation.name)
@@ -107,7 +124,7 @@ class MotorManager(object):
         newcomponent.location = location
         print 'lll', location.instrument.name
         #print self.store.find(Instrument, Instrument.name.is_in([unicode(location.instrument.name)]))#.order_by('instrument_name').one()
-        print self.store.find(Component)#, newcomponent.name == unicode(newcomponent.instrument.name))
+        #print self.store.find(Component)#, newcomponent.name == unicode(newcomponent.instrument.name))
         
         print 'kiki'
         #print newcomponent.instrument.find(newcomponent.instrument.name)
@@ -124,7 +141,7 @@ class MotorManager(object):
         newcomponent.instrument = location.instrument
         print 'Creating New Component', newcomponent.name, 'in location', location.name, 'in instrument', newcomponent.instrument.name
         #print self.store.find(Instrument, newcomponent.instrument.name).order_by(newcomponent.instrument.name).one()
-        print self.store.find(Component, 'instrument_name').order_by('instrument_name').one()
+        #print self.store.find(Component, 'instrument_name').order_by('instrument_name').one()
 #         print [type(component.name) for component in self.store.find(Instrument).order_by(Instrument.name)]
 #         print 'here'
 #         instr = self.get_instruments(self.store)#, info_classes=[Instrument]).one()
@@ -154,9 +171,9 @@ if __name__ == '__main__':
     manager.create_alltables()
 
 
-    amo  = manager.addinstrument('AMO')
-    
-    amo  = manager.addinstrument('AMO')
+    amo = manager.addinstrument('AMO')
+    cxi = manager.addinstrument('CXI')
+    #amo  = manager.addinstrument('AMO')
     #print amo.name.find(unicode('AMO'))
 #             print 'ERROR: Location Exist!'
 #             return None
@@ -165,3 +182,5 @@ if __name__ == '__main__':
     lamp = manager.addlocation('LAMP', amo)
     #print lamp.name.find(unicode('LAMP'))
     sl02 = manager.addcomponent('slits02', lamp)
+    sb2 = manager.addlocation('SB2', cxi)
+    sl01 = manager.addcomponent('slits01', sb2)

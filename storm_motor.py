@@ -215,6 +215,7 @@ class MotorManager(object):
     def addinstrument(self, instrument):    	
         newinstrument = Instrument(unicode(instrument))
         print 'Creating New Instrument', newinstrument.name
+        print 'find', self.store.find(newistrument.name)
         return newinstrument
 
     def addlocation(self, location, instrument):
