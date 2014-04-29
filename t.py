@@ -4,21 +4,21 @@ import sys
 
 class Instrument(object):
     __storm_table__ = "instrument"
-    id = Int(allow_none=False)
-    name = Unicode(allow_none=False, primary=True)
-    locations = Unicode()
+    id = Int(primary=True)
+    name = Unicode()
+    #locations = Unicode()
     def __init__(self, name):
         self.name = name
         
 class Loc(object):
     __storm_table__ = "location"
     #instrument_id = Int(primary=True)
-    instrument_name = Unicode(allow_none=False, primary=True)
-    id = Int(allow_none=False)
-    instrument = Reference(instrument_name, Instrument.name)
-    name = Unicode(allow_none=False)
-    #components = Unicode()
-    locations = Reference(Instrument.locations, name)
+    id = Int(primary=True)
+    instrument_id = Int()
+    instrument = Reference(instrument_id, Instrument.id)
+    name = Unicode()
+    ###components = Unicode()
+    #locations = Reference(Instrument.locations, name)
     
 class Location(Loc):
     def __init__(self, name):
@@ -27,14 +27,22 @@ class Location(Loc):
 
 class Component(Location):
     __storm_table__ = "component"
-    id = Int(allow_none=False)#primary=True)   
-    location_name = Unicode(allow_none=False) 
-    location = Reference(location_name, Location.name)
-    devices = Unicode()
+    id = Int(primary=True) 
+    location_id = Int()  
+    location = Reference(location_id, Location.id)
     
     def __init__(self, name):
         self.name = name
-        
+ 
+class Device(Component):
+    __storm_table__ = "device"
+    id = Int(primary=True) 
+    component_id = Int()  
+    component = Reference(component_id, Component.id)
+    
+    def __init__(self, name):
+        self.name = name    
+            
 class MotorManager(object):
     def __init__(self, scheme, user, passwd, hostname, port, dbname, parent=None):
         #database = create_database("sqlite:")
@@ -45,16 +53,23 @@ class MotorManager(object):
     def create_alltables(self):
         try:
             self.store.execute("CREATE TABLE instrument "
-                               "(id INTEGER  PRIMARY KEY, name VARCHAR, locations VARCHAR)", noresult=True)
+                               "(id INTEGER  PRIMARY KEY, name VARCHAR)", noresult=True)
             
             self.store.execute("CREATE TABLE location "
-                               "(id INTEGER PRIMARY KEY, instrument_name VARCHAR, name VARCHAR, components VARCHAR)", noresult=True)
+                               "(id INTEGER PRIMARY KEY, instrument_id INTEGER, name VARCHAR)", noresult=True)
 
             self.store.execute("CREATE TABLE component "
-                               "(id INTEGER PRIMARY KEY, instrument_name VARCHAR, location_name VARCHAR, name VARCHAR, devices VARCHAR)", noresult=True)            
+                               "(id INTEGER PRIMARY KEY, instrument_id INTEGER, location_id INTEGER, name VARCHAR)", noresult=True)            
+            
+            self.store.execute("CREATE TABLE device "
+                               "(id INTEGER PRIMARY KEY, instrument_id INTEGER, location_id INTEGER, component_id INTEGER, name VARCHAR)", noresult=True)            
         except:
             pass
         
+        # References:
+        Instrument.locations = ReferenceSet(Instrument.id, Location.instrument_id)
+        Location.components  = ReferenceSet(Location.id, Component.location_id)   
+             
     def commit(self):
         self.store.commit()
 
@@ -68,7 +83,7 @@ class MotorManager(object):
             if instrument.name == instrument_name:
                 print 'Instrument %s already exists' % instrument.name
                 return instrument        
-        newinstrument = Instrument(unicode(instrument_name))
+        newinstrument = self.store.add(Instrument(unicode(instrument_name)))
         print 'Creating New Instrument', newinstrument.name
         self.commit()
         return newinstrument
@@ -80,7 +95,7 @@ class MotorManager(object):
                 if location.name == location_name:
                     print 'Location %s already exists in' % location.name, location.instrument.name
                     return location
-            newlocation = Location(unicode(location_name))
+            newlocation = self.store.add(Location(unicode(location_name)))
             newlocation.instrument = instrument
             print 'Creating New Location', newlocation.name, 'in instrument', instrument.name
             self.commit()
@@ -102,6 +117,16 @@ class MotorManager(object):
             return newcomponent
         return None
     
+    def adddevice(self, device_name=None, component=None):
+        print 'TODO adddevice'
+        if component:
+            device = self.getdevice(device_name)
+            if device:
+                if device.name == device_name:
+                    print 'Device %s already exists in' % device.name, device.component.name
+                    return device
+                dddd
+    
     def getinstrument(self, instrument_name):
         return self.store.find(Instrument, Instrument.name == unicode(instrument_name)).one()
 
@@ -117,30 +142,38 @@ class MotorManager(object):
         return result.count()
     
     def getlocations(self, instrument):
-        print self.store.find(Instrument, Instrument.name)
-        for i in self.store.find(Instrument, Instrument.name):#.values():
-              print 'i', i#.one()
-        #print 'n', n
-#         locations = list()
-#         for loc in Location.name:
-#             locations.append(loc)
-#         return loc
+        locations = list()
+        for location in instrument.locations:
+            locations.append(str(location.name))
+        return locations
     
     def getcomponents(self, location):
-        pass
+        components = list()
+        for component in location.components:
+            components.append(str(component.name))
+        return components
          
-        #print res.one().count()
-#     def get_instruments(store, info_classes=None):
-#         print 'here'
-#         where = []
-#         
-#         if info_classes:
-#             info_types = [info_class.info_type for info_class in info_classes]
-#             where = [Instrument.info_type.is_in(info_types)]
-#         result = self.store.find(Instrument, *where)
-#         result.order_by(Instrument.name)
-#         return result
-#                 
+    def delinstrument(self, instrument):
+        self.store.remove(instrument)
+        del instrument
+        self.commit()
+    
+    def dellocation(self, location):
+        self.store.remove(location)
+        del location
+        self.commit() 
+    
+    def delcomponent(self, component):
+        self.store.remove(component)
+        del component
+        self.commit()
+        
+    def deldevice(self, device):
+        self.store.remove(device)
+        del device
+        self.commit() 
+    
+             
 if __name__ == '__main__':
     scheme   = 'sqlite'
     user     = 'pcds'
@@ -154,13 +187,37 @@ if __name__ == '__main__':
     amo = manager.addinstrument('AMO')
     cxi = manager.addinstrument('CXI')
     lamp = manager.addlocation('LAMP', amo)
-    sl02 = manager.addcomponent('slits02', lamp)
+    #lamp1 = manager.addlocation('LAMP1', amo)
+    
     #sl02 = manager.addcomponent('slits02', lamp)
     sb2 = manager.addlocation('SB2', cxi)
-    sl01 = manager.addcomponent('slits01', sb2)
-    print '\nNEED TO FIND INSTRUMENTS, LOCATIONS AND COMPONENTS...\n'
-    #print manager.getinstruments()
+    sb3 = manager.addlocation('SB3', cxi)
     
-    Instrument.locations = ReferenceSet(Instrument.name, Location.name)
-    print amo.locations.count()
+    sl00 = manager.addcomponent('slits00', lamp)
+    sl01 = manager.addcomponent('slits01', sb2)
+    sl02 = manager.addcomponent('slits02', sb2)
+    sl03 = manager.addcomponent('slits03', sb3)
+    sl04 = manager.addcomponent('slits04', sb3)
+    sl05 = manager.addcomponent('slits05', sb3)
+    
+    print '\nTHIS IS OK'
+    print 'sb2.components.count()', sb2.components.count()
+    print 'sb3.components.count()', sb3.components.count()
+    print '\nTHIS IS OK'
+    print 'amo.locations.count()', amo.locations.count()
+    print 'cxi.locations.count()', cxi.locations.count()
+    print '\nTHIS IS OK'
     print manager.getlocations(amo)
+    print manager.getlocations(cxi)
+    print '\nTHIS IS OK'
+    print manager.getcomponents(sb2)
+    print manager.getcomponents(sb3)
+    print manager.getcomponents(lamp)
+    print'\nDEL COMPONENT, LOCATION, INSTRUMENT'
+    print manager.getcomponents(sb3)
+    print 'Deleting', sl05.name
+    manager.delcomponent(sl05)
+    print manager.getcomponents(sb3)
+    
+    mot01 = manager.adddevice('AMO:TST:MMS:01', sl00)
+    
