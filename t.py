@@ -118,14 +118,20 @@ class MotorManager(object):
         return None
     
     def adddevice(self, device_name=None, component=None):
-        print 'TODO adddevice'
         if component:
             device = self.getdevice(device_name)
             if device:
                 if device.name == device_name:
                     print 'Device %s already exists in' % device.name, device.component.name
                     return device
-                dddd
+            newdevice = self.store.add(Device(unicode(device_name)))
+            newdevice.component = component
+            newdevice.location = component.location
+            newdevice.instrument = component.instrument            
+            print 'Creating New Device', newdevice.name, 'in component', component.name, 'in location', component.location.name, 'in instrument', newdevice.instrument.name
+            self.commit()     
+            return newdevice
+        return None
     
     def getinstrument(self, instrument_name):
         return self.store.find(Instrument, Instrument.name == unicode(instrument_name)).one()
@@ -135,6 +141,9 @@ class MotorManager(object):
    
     def getcomponent(self, component_name):
         return self.store.find(Component, Component.name == unicode(component_name)).one()
+
+    def getdevice(self, device_name):
+        return self.store.find(Device, Device.name == unicode(device_name)).one()
     
     def getinstruments(self):
         result = self.store.find(Instrument, Instrument.name==unicode('*'))
@@ -175,12 +184,20 @@ class MotorManager(object):
     
              
 if __name__ == '__main__':
+    import platform
     scheme   = 'sqlite'
     user     = 'pcds'
     passwd   = 'pcds2014'
     hostname = 'localhost' # to change
     port     = ''
-    dbname   = '/Users/paiser/aaaadb'
+    mypc     = platform.system()
+    if mypc == 'Linux':
+        dbdirectory = '/reg/neh/home1/paiser'
+    elif mypc == 'Osx':
+        dbdirectory = '/Users/paiser'
+    else:
+        dbdirectory = '/Users/paiser'
+    dbname   = '%s/aaaadb' % dbdirectory
     manager = MotorManager(scheme, user, passwd, hostname, port, dbname)
     manager.create_alltables()
 
@@ -218,6 +235,13 @@ if __name__ == '__main__':
     print 'Deleting', sl05.name
     manager.delcomponent(sl05)
     print manager.getcomponents(sb3)
-    
+    print 'Adding Motors to Components'
     mot01 = manager.adddevice('AMO:TST:MMS:01', sl00)
-    
+    mot02 = manager.adddevice('CXI:TST:MMS:01', sl03)
+    mot03 = manager.adddevice('CXI:TST:MMS:02', sl01)
+    mot04 = manager.adddevice('CXI:TST:MMS:03', sl03)
+    print 'mot01', mot01.name, 'added'
+    print 'mot02', mot02.name, 'added'
+    print 'mot03', mot03.name, 'added'
+    print 'mot04', mot04.name, 'added'
+    print 'TODO: Now the configuration setup and storage...'
