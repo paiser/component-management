@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 from storm.locals import *
+from IMSmotorcfg import *
+from IMSmotor import *
 import sys
 
 class Instrument(object):
@@ -45,7 +47,6 @@ class Device(Component):
             
 class MotorManager(object):
     def __init__(self, scheme, user, passwd, hostname, port, dbname, parent=None):
-        #database = create_database("sqlite:")
         dbpars   = (scheme, user, passwd, hostname, port, dbname)
         database = create_database("%s://%s:%s@%s:%s/%s" % dbpars)        
         self.store = Store(database)
@@ -63,6 +64,19 @@ class MotorManager(object):
             
             self.store.execute("CREATE TABLE device "
                                "(id INTEGER PRIMARY KEY, instrument_id INTEGER, location_id INTEGER, component_id INTEGER, name VARCHAR)", noresult=True)            
+
+            self.store.execute("CREATE TABLE cfgparameter "
+                               "(name VARCHAR(20) NOT NULL DEFAULT '', cfg_id INTEGER(10) NOT NULL DEFAULT '0',value VARCHAR(45) NOT NULL DEFAULT '', PRIMARY KEY (name, cfg_id))", noresult=True)
+
+            self.store.execute("CREATE TABLE cfgparameterinfo "
+                               "(name VARCHAR(20) NOT NULL DEFAULT '', info VARCHAR(255) NOT NULL DEFAULT '', PRIMARY KEY (name))", noresult=True)                
+            
+            self.store.execute("CREATE TABLE imsmotorcfg "
+                               "(id INTEGER PRIMARY KEY NOT NULL, component_name VARCHAR(25), motor_name INTEGER(10), name VARCHAR(40) NOT NULL DEFAULT '', description VARCHAR(255), signature VARCHAR(40), date datetime NOT NULL DEFAULT '')", noresult=True)
+            
+            self.store.execute("CREATE TABLE imsmotor "
+                               "(component_name VARCHAR(25) NOT NULL DEFAULT '', name VARCHAR(25) NOT NULL DEFAULT '', alias VARCHAR(30), PRIMARY KEY (component_name, name))", noresult=True)
+        
         except:
             pass
         
@@ -181,7 +195,22 @@ class MotorManager(object):
         self.store.remove(device)
         del device
         self.commit() 
+
+    def addIMSconfiguration(self, motor, config=None):         
+        if config:
+            newconfig = self.store.add(IMSMotorCfg(motor.name))
+            print 'Creating New Configuration', newconfig.name
+            self.commit()
+            return newconfig
+        return None
     
+    def addIMSmotor(self, motor, component=None):         
+        if component:
+            newimsmotor = self.store.add(IMSMotor(motor.name, component.name))
+            print 'Creating New IMSmotor', newimsmotor.name
+            self.commit()
+            return newimsmotor
+        return None    
              
 if __name__ == '__main__':
     import platform
@@ -236,12 +265,20 @@ if __name__ == '__main__':
     manager.delcomponent(sl05)
     print manager.getcomponents(sb3)
     print 'Adding Motors to Components'
-    mot01 = manager.adddevice('AMO:TST:MMS:01', sl00)
-    mot02 = manager.adddevice('CXI:TST:MMS:01', sl03)
-    mot03 = manager.adddevice('CXI:TST:MMS:02', sl01)
-    mot04 = manager.adddevice('CXI:TST:MMS:03', sl03)
+    mot00 = manager.adddevice('AMO:TST:MMS:01', sl00)
+    mot01 = manager.adddevice('CXI:TST:MMS:01', sl03)
+    mot02 = manager.adddevice('CXI:TST:MMS:02', sl01)
+    mot03 = manager.adddevice('CXI:TST:MMS:03', sl03)
+    print 'mot00', mot00.name, 'added'
     print 'mot01', mot01.name, 'added'
     print 'mot02', mot02.name, 'added'
     print 'mot03', mot03.name, 'added'
-    print 'mot04', mot04.name, 'added'
-    print 'TODO: Now the configuration setup and storage...'
+    print 'ONGOING: Now the configuration setup and storage...'
+    config = ('t0=0','t1=1')
+    cfg01 = manager.addIMSconfiguration(mot01, config)
+    print 'cfg01', cfg01
+    print sl01.name
+    #m01 = manager.addIMSmotor(mot01, sl01)
+    #m02 = manager.addIMSmotor(mot02, sl02)
+    #print 'm01', m01
+    
