@@ -176,6 +176,12 @@ class MotorManager(object):
             components.append(str(component.name))
         return components
          
+    def getmotors(self, component):
+        motors = list()
+        for motor in component.motors:
+            motors.append(str(motor.name))
+        return motors
+    
     def delinstrument(self, instrument):
         self.store.remove(instrument)
         del instrument
@@ -274,11 +280,14 @@ if __name__ == '__main__':
     print 'mot02', mot02.name, 'added'
     print 'mot03', mot03.name, 'added'
     print 'ONGOING: Now the configuration setup and storage...'
-    config = ('t0=0','t1=1')
-    cfg01 = manager.addIMSconfiguration(mot01, config)
+    config01 = ('rc=0','el=1')
+    config02 = ('rc=1','el=1')
+    cfg01 = manager.addIMSconfiguration(mot01, config01)
+    cfg02 = manager.addIMSconfiguration(mot02, config02)
     print 'cfg01', cfg01
+    print 'cfg02', cfg02
     print sl01.name
-    #m01 = manager.addIMSmotor(mot01, sl01)
+    m01 = manager.addIMSmotor(mot01, sl01)
     #m02 = manager.addIMSmotor(mot02, sl02)
     #print 'm01', m01
     
