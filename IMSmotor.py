@@ -104,7 +104,7 @@ class IMSMotor(Storm):
         if self.current_cfg == other.current_cfg:
             self.setConflict(Conflict.NO_CONFLICT)
             return 0
-        self.setConflict(Conflict.DRIVER_CHANGED)
+        self.setConflict(Conflict.MOTOR_CHANGED)
         return -1
      
     # SORT THE IMS MOTORS IN THE TREE
